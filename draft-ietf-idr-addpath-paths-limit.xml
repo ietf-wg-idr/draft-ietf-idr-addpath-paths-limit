@@ -13,11 +13,11 @@
 <?rfc sortrefs="yes" ?>
 <?rfc compact="yes" ?>
 <?rfc subcompact="no" ?>
-<rfc xmlns:xi="http://www.w3.org/2001/XInclude" category="std" docName="draft-ietf-idr-addpath-paths-limit-00" ipr="trust200902" consensus="true" obsoletes="" updates="" submissionType="IETF" xml:lang="en" tocInclude="true" tocDepth="4" symRefs="true" sortRefs="true" version="3">
+<rfc xmlns:xi="http://www.w3.org/2001/XInclude" category="std" docName="draft-ietf-idr-addpath-paths-limit-01" ipr="trust200902" consensus="true" obsoletes="" updates="" submissionType="IETF" xml:lang="en" tocInclude="true" tocDepth="4" symRefs="true" sortRefs="true" version="3">
   <!-- xml2rfc v2v3 conversion 3.12.8 -->
   <front>
     <title abbrev="Paths Limit for Multiple Paths in BGP">Paths Limit for Multiple Paths in BGP</title>
-    <seriesInfo name="Internet-Draft" value="draft-ietf-idr-addpath-paths-limit-00"/>
+    <seriesInfo name="Internet-Draft" value="draft-ietf-idr-addpath-paths-limit-01"/>
     <author fullname="Donatas Abraitis" surname="Abraitis">
       <organization>NetDef</organization>
       <address>
@@ -175,24 +175,61 @@
        If more than one tuple is received for the same AFI/SAFI pair, only the first tuple should be considered.  All others MUST be ignored.
       </t>
       <t>
-        A sender advertising multiple paths for the same prefix SHOULD send only the specified maximum number of paths indicated in the PATHS-LIMIT capability.
-      </t>
-      <t>
-        When the number of candidate paths for a prefix exceeds the Paths
-        Limit, the sender MUST advertise paths that it
-        considers usable (e.g., paths with a resolvable NEXT_HOP).
-        The sender's view of the usability of a
-        path may differ from the receiver's (e.g., due to differing
-        reachability of the NEXT_HOP), so this does not remove the need for
-        the receiver considerations described in
-        <xref target="operational"/>.
-      </t>
-      <t>
         An implementation SHOULD provide a configuration knob to specify
         the maximum number of paths to accept from a sender.  The handling
         of a sender that exceeds this limit is described in
         <xref target="operational"/>.
       </t>
+    </section>
+    <section anchor="sender">
+      <name>Sender Procedures</name>
+      <t>
+        A sender advertising multiple paths for the same prefix SHOULD
+        send only the specified maximum number of paths indicated in the
+        PATHS-LIMIT capability.
+      </t>
+      <section anchor="selection">
+        <name>Path Selection</name>
+        <t>
+          When more paths are available for a prefix than the Paths Limit
+          allows, the sender SHOULD select them by repeatedly running the
+          BGP Decision Process (Section 9.1 of <xref target="RFC4271"/>):
+          the first path is the best path, the second is the best of the
+          remaining paths, and so on, until the Paths Limit is reached.
+          Only paths permitted by the sender's outbound policy are
+          considered, and the sender MUST NOT advertise paths it considers
+          unusable (e.g., paths with an unresolvable NEXT_HOP).
+        </t>
+        <t>
+          As a result, the receiver always gets the sender's best path, as
+          recommended in Section 5 of <xref target="RFC7911"/>.  The
+          selection also does not depend on the peer: peers with the same
+          Paths Limit receive the same paths, and a peer with a lower Paths
+          Limit receives a subset of them.
+        </t>
+        <t>
+          Applications that require a different set of paths (e.g., the
+          Group Best Paths of <xref target="RFC7964"/>) MAY select paths
+          differently, within the Paths Limit.
+        </t>
+      </section>
+      <section anchor="replacement">
+        <name>Changes to the Advertised Paths</name>
+        <t>
+          When an advertised path is withdrawn or becomes unusable, the
+          sender SHOULD advertise the next best path, if any, in its place.
+          When a new path is selected, it replaces the lowest-ranked
+          advertised path.
+        </t>
+        <t>
+          While doing so, a sender that honors the Paths Limit MUST NOT
+          exceed it, even transiently.  It can either withdraw the old path
+          before, or in the same UPDATE message as, the new one, or
+          advertise the new path with the Path Identifier of the old one,
+          which implicitly replaces it (Section 5 of
+          <xref target="RFC7911"/>).
+        </t>
+      </section>
     </section>
     <section anchor="subcode">
       <name>Maximum Number of Paths Reached Cease NOTIFICATION Subcode</name>
@@ -242,6 +279,12 @@
         Paths Limit was exceeded for more than one &lt;AFI, SAFI&gt;, it MAY
         include the Data field for any one of them.
       </t>
+      <t>
+        As with the "Maximum Number of Prefixes Reached" subcode
+        <xref target="RFC4486"/>, the limit is carried rather than the
+        number of paths received: a peer that does not support the
+        PATHS-LIMIT Capability has no other way to learn it.
+      </t>
     </section>
     <section anchor="operational">
       <name>Operational Considerations</name>
@@ -272,6 +315,14 @@
         the peering.
       </t>
       <t>
+        When counting the paths for a prefix, a receiver MUST process the
+        withdrawals in an UPDATE message before its advertisements, and
+        MUST NOT count an implicit replacement (same Path Identifier
+        <xref target="RFC7911"/>) as an additional path, so that the
+        replacements described in <xref target="replacement"/> are not
+        seen as exceeding the limit.
+      </t>
+      <t>
         When BGP Graceful Restart with NOTIFICATION support has been
         negotiated, a speaker that sends or receives this subcode follows
         the procedures of <xref target="RFC8538"/>.  A speaker whose local
@@ -280,6 +331,22 @@
         carrying the "Cease" code and "Maximum Number of Paths Reached"
         subcode in the Data field of the Hard Reset message.
       </t>
+      <section anchor="consistency">
+        <name>Routing Consistency</name>
+        <t>
+          A Paths Limit of N is equivalent to the sender being configured
+          to advertise at most N paths per prefix.  Each advertised path is
+          a regular BGP path, and AS_PATH loop prevention
+          <xref target="RFC4271"/> is not affected.
+        </t>
+        <t>
+          Applications that depend on specific paths, such as the
+          solutions in <xref target="RFC7964"/> to the MED-induced route
+          oscillations of <xref target="RFC3345"/>, lose their guarantees if
+          the Paths Limit is too low.  A BGP speaker SHOULD advertise a Paths
+          Limit sufficient for the ADD-PATH applications in use.
+        </t>
+      </section>
     </section>
     <section anchor="implementation">
       <name>Implementation Considerations</name>
@@ -322,10 +389,9 @@
         </li>
         <li>
           The sender selects which paths to advertise (see
-          <xref target="capability"/>).  If it does so deterministically,
-          for example by using the same ordering of candidate paths for all
-          peers, then peers with the same effective number of paths
-          receive the same paths and can share an update group.
+          <xref target="selection"/>).  Because that selection does not
+          depend on the peer, peers with the same effective number of paths receive the
+          same paths and can share an update group.
         </li>
       </ul>
       <t>
@@ -395,7 +461,8 @@
       <t>
        A rogue node or misconfiguration can result in the advetisement
        of a Paths Limit value that is too low for the application being
-       used.  This can result in inconsistent forwarding.  Describing
+       used.  This can result in inconsistent routing and forwarding, as
+       described in <xref target="consistency"/>.  Describing
        applications for BGP ADD-PATH is outside the scope of this
        document.  Users of the PATHS-LIMIT Capability are encouraged to
        examine the behavior and potential impact by studying the best
@@ -415,7 +482,7 @@
       <name>Acknowledgements</name>
       <t>
         The authors would like to thank everyone who has commented on this work, including
-        Robert Raszuk, Shyam Sethuram.
+        Robert Raszuk, Shyam Sethuram, and Maria Matejka.
       </t>
     </section>
   </middle>
@@ -436,6 +503,8 @@
       <references>
       <name>Informative References</name>
         <xi:include href="https://bib.ietf.org/public/rfc/bibxml3/reference.I-D.ietf-idr-add-paths-guidelines.xml"/>
+        <xi:include href="https://www.rfc-editor.org/refs/bibxml/reference.RFC.3345.xml"/>
+        <xi:include href="https://www.rfc-editor.org/refs/bibxml/reference.RFC.7964.xml"/>
       </references>
     </references>
   </back>
