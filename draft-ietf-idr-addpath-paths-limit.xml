@@ -222,12 +222,8 @@
           advertised path.
         </t>
         <t>
-          While doing so, a sender that honors the Paths Limit MUST NOT
-          exceed it, even transiently.  It can either withdraw the old path
-          before, or in the same UPDATE message as, the new one, or
-          advertise the new path with the Path Identifier of the old one,
-          which implicitly replaces it (Section 5 of
-          <xref target="RFC7911"/>).
+          While doing so, a sender SHOULD NOT exceed the received Paths Limit,
+          even transiently.
         </t>
       </section>
     </section>
