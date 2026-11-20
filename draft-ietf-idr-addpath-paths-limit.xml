@@ -209,7 +209,7 @@
         </t>
         <t>
           Applications that require a different set of paths (e.g., the
-          Group Best Paths of <xref target="RFC7964"/>) MAY select paths
+          Group Best Paths of <xref target="RFC7964"/>) may select paths
           differently, within the Paths Limit.
         </t>
       </section>
