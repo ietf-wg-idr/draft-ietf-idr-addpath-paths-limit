@@ -311,7 +311,7 @@
         the peering.
       </t>
       <t>
-        When counting the paths for a prefix, a receiver MUST process the
+        When counting the paths for a prefix, a receiver should process the
         withdrawals in an UPDATE message before its advertisements, and
         MUST NOT count an implicit replacement (same Path Identifier
         <xref target="RFC7911"/>) as an additional path, so that the
