@@ -185,7 +185,7 @@
       <name>Sender Procedures</name>
       <t>
         A sender advertising multiple paths for the same prefix SHOULD
-        send only the specified maximum number of paths indicated in the
+        NOT send more than the maximum number of paths indicated in the
         PATHS-LIMIT capability.
       </t>
       <section anchor="selection">
