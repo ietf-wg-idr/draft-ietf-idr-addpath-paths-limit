@@ -216,10 +216,9 @@
       <section anchor="replacement">
         <name>Changes to the Advertised Paths</name>
         <t>
-          When an advertised path is withdrawn or becomes unusable, the
-          sender SHOULD advertise the next best path, if any, in its place.
-          When a new path is selected, it replaces the lowest-ranked
-          advertised path.
+          When an advertised path is withdrawn, becomes unusable, 
+          or otherwise no longer meets the criteria for advertisement (above),
+          the sender SHOULD advertise a replacement.
         </t>
         <t>
           While doing so, a sender SHOULD NOT exceed the received Paths Limit,
